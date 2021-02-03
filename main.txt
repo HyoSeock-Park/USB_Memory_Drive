@@ -1,0 +1,15 @@
+Project_Name : USB_Memory_Drive
+	
+Participants : 박효석 / 오다은
+
+From 2021-01-05~
+		
+Outline
+
+    - MCU( based ARM Core )를 이용한 embedded system 구현
+        - Target system : USB memory stick ( USB memory drive )
+        - MCU : STM32F103ZET
+	- ARM Core : cortex-M3
+
+    - Direction
+        - Nand Flash FTL과 USB MSC 구현을 병렬로 진행
