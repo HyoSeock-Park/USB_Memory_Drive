@@ -4,37 +4,21 @@
   * Description        : This file provides code for the configuration
   *                      of the FSMC peripheral.
   ******************************************************************************
+  * @attention
   *
-  * COPYRIGHT(c) 2021 STMicroelectronics
+  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
   */
+
 /* Includes ------------------------------------------------------------------*/
 #include "fsmc.h"
-
-#include "gpio.h"
 
 /* USER CODE BEGIN 0 */
 
@@ -45,8 +29,16 @@ NAND_HandleTypeDef hnand1;
 /* FSMC initialization function */
 void MX_FSMC_Init(void)
 {
-  FSMC_NAND_PCC_TimingTypeDef ComSpaceTiming;
-  FSMC_NAND_PCC_TimingTypeDef AttSpaceTiming;
+  /* USER CODE BEGIN FSMC_Init 0 */
+
+  /* USER CODE END FSMC_Init 0 */
+
+  FSMC_NAND_PCC_TimingTypeDef ComSpaceTiming = {0};
+  FSMC_NAND_PCC_TimingTypeDef AttSpaceTiming = {0};
+
+  /* USER CODE BEGIN FSMC_Init 1 */
+
+  /* USER CODE END FSMC_Init 1 */
 
   /** Perform the NAND1 memory initialization sequence
   */
@@ -59,12 +51,14 @@ void MX_FSMC_Init(void)
   hnand1.Init.ECCPageSize = FSMC_NAND_ECC_PAGE_SIZE_512BYTE;
   hnand1.Init.TCLRSetupTime = 0;
   hnand1.Init.TARSetupTime = 0;
-  /* hnand1.Info */
-  hnand1.Info.PageSize = 0x800;
-  hnand1.Info.SpareAreaSize = 0x40;
-  hnand1.Info.BlockSize = 0x40;
-  hnand1.Info.BlockNbr = 0x400;
-  hnand1.Info.ZoneSize = 0x1;
+  /* hnand1.Config */
+  hnand1.Config.PageSize = 2048;
+  hnand1.Config.SpareAreaSize = 64;
+  hnand1.Config.BlockSize = 64;
+  hnand1.Config.BlockNbr = 1024;
+  hnand1.Config.PlaneNbr = 1;
+  hnand1.Config.PlaneSize = 1024;
+  hnand1.Config.ExtraCommandEnable = DISABLE;
   /* ComSpaceTiming */
   ComSpaceTiming.SetupTime = 0x1;
   ComSpaceTiming.WaitSetupTime = 0x3;
@@ -78,7 +72,7 @@ void MX_FSMC_Init(void)
 
   if (HAL_NAND_Init(&hnand1, &ComSpaceTiming, &AttSpaceTiming) != HAL_OK)
   {
-    Error_Handler();
+    Error_Handler( );
   }
 
   /** Disconnect NADV
@@ -86,6 +80,9 @@ void MX_FSMC_Init(void)
 
   __HAL_AFIO_FSMCNADV_DISCONNECTED();
 
+  /* USER CODE BEGIN FSMC_Init 2 */
+
+  /* USER CODE END FSMC_Init 2 */
 }
 
 static uint32_t FSMC_Initialized = 0;
@@ -94,11 +91,12 @@ static void HAL_FSMC_MspInit(void){
   /* USER CODE BEGIN FSMC_MspInit 0 */
 
   /* USER CODE END FSMC_MspInit 0 */
-  GPIO_InitTypeDef GPIO_InitStruct;
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
   if (FSMC_Initialized) {
     return;
   }
   FSMC_Initialized = 1;
+
   /* Peripheral clock enable */
   __HAL_RCC_FSMC_CLK_ENABLE();
 
