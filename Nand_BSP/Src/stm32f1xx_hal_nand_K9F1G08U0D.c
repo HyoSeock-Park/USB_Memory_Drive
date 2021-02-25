@@ -309,7 +309,7 @@ HAL_StatusTypeDef HAL_NAND_K9_Write_Page(NAND_HandleTypeDef *hnand, NAND_Address
 
 	      *(__IO uint8_t *)((uint32_t)(deviceaddress | ADDR_AREA)) = 0x00U; // offsetinpage
 	      __DSB();
-	      *(__IO uint8_t *)((uint32_t)(deviceaddress | ADDR_AREA)) = 0x00U; // offsetinpage
+	      *(__IO uint8_t *)((uint32_t)(deviceaddress | ADDR_AREA)) = 0x00U >> 8; // offsetinpage
 	      __DSB();
 	      *(__IO uint8_t *)((uint32_t)(deviceaddress | ADDR_AREA)) = ADDR_1ST_CYCLE(nandaddress); // row_addr = page_number
 	      __DSB();
@@ -323,6 +323,7 @@ HAL_StatusTypeDef HAL_NAND_K9_Write_Page(NAND_HandleTypeDef *hnand, NAND_Address
 	        pBuffer++;
 	        __DSB();
 	      }
+
 
 	      *(__IO uint8_t *)((uint32_t)(deviceaddress | CMD_AREA)) = NAND_CMD_WRITE_TRUE1;
 	      __DSB();
@@ -369,6 +370,256 @@ HAL_StatusTypeDef HAL_NAND_K9_Write_Page(NAND_HandleTypeDef *hnand, NAND_Address
 
 	  return HAL_OK;
 }
+
+
+/**
+  * @brief  Read Spare area(s) from NAND memory (8-bits addressing)
+  * @param  hnand pointer to a NAND_HandleTypeDef structure that contains
+  *                the configuration information for NAND module.
+  * @param  pAddress  pointer to NAND address structure
+  * @param  pBuffer pointer to source buffer to write
+  * @param  NumSpareAreaToRead Number of spare area to read
+  * @retval HAL status
+  */
+HAL_StatusTypeDef HAL_NAND_K9_Read_SpareArea(NAND_HandleTypeDef *hnand, NAND_AddressTypeDef *pAddress, uint8_t *pBuffer,
+                                             uint32_t NumSpareAreaToRead)
+{
+  uint32_t deviceaddress;
+  uint32_t nandaddress;
+  uint32_t columnaddress;
+
+  uint32_t index;
+  uint32_t tickstart;
+
+  //uint32_t numsparearearead = 0;
+
+  /* Check the NAND controller state */
+  if (hnand->State == HAL_NAND_STATE_BUSY)
+  {
+    return HAL_BUSY;
+  }
+  else if (hnand->State == HAL_NAND_STATE_READY)
+  {
+    /* Process Locked */
+    __HAL_LOCK(hnand);
+
+    /* Update the NAND controller state */
+    hnand->State = HAL_NAND_STATE_BUSY;
+
+    /* Identify the device address */
+    if (hnand->Init.NandBank == FSMC_NAND_BANK2)
+    {
+      deviceaddress = NAND_DEVICE1;
+    }
+    else
+    {
+      deviceaddress = NAND_DEVICE2;
+    }
+
+    /* NAND raw address calculation */
+    nandaddress = ARRAY_ADDRESS(pAddress, hnand);
+
+    /* Column in page address */
+    columnaddress = COLUMN_ADDRESS(hnand);
+
+    /* Spare area(s) read loop */
+    while ((NumSpareAreaToRead != 0U) && (nandaddress < ((hnand->Config.BlockSize) * (hnand->Config.BlockNbr))))
+    {
+
+      /* Send read spare area command sequence */
+      *(__IO uint8_t *)((uint32_t)(deviceaddress | CMD_AREA)) = NAND_CMD_AREA_A;
+      __DSB();
+
+      *(__IO uint8_t *)((uint32_t)(deviceaddress | ADDR_AREA)) = COLUMN_1ST_CYCLE(columnaddress);
+      __DSB();
+      *(__IO uint8_t *)((uint32_t)(deviceaddress | ADDR_AREA)) = COLUMN_2ND_CYCLE(columnaddress);
+      __DSB();
+      *(__IO uint8_t *)((uint32_t)(deviceaddress | ADDR_AREA)) = ADDR_1ST_CYCLE(nandaddress);
+      __DSB();
+      *(__IO uint8_t *)((uint32_t)(deviceaddress | ADDR_AREA)) = ADDR_2ND_CYCLE(nandaddress);
+      __DSB();
+
+      *(__IO uint8_t *)((uint32_t)(deviceaddress | CMD_AREA)) = NAND_CMD_AREA_TRUE1;
+      __DSB();
+
+      if (hnand->Config.ExtraCommandEnable == ENABLE)
+      {
+        /* Get tick */
+        tickstart = HAL_GetTick();
+
+        /* Read status until NAND is ready */
+        while (HAL_NAND_Read_Status(hnand) != NAND_READY)
+        {
+          if ((HAL_GetTick() - tickstart) > NAND_WRITE_TIMEOUT)
+          {
+            /* Update the NAND controller state */
+            hnand->State = HAL_NAND_STATE_ERROR;
+
+            /* Process unlocked */
+            __HAL_UNLOCK(hnand);
+
+            return HAL_TIMEOUT;
+          }
+        }
+
+        /* Go back to read mode */
+        *(__IO uint8_t *)((uint32_t)(deviceaddress | CMD_AREA)) = ((uint8_t)0x00);
+        __DSB();
+      }
+
+      /* Get Data into Buffer */
+      for (index = 0U; index < hnand->Config.SpareAreaSize; index++)
+      {
+        *pBuffer = *(uint8_t *)deviceaddress;
+        pBuffer++;
+      }
+
+      /* Increment read spare areas number */
+      //numsparearearead++;
+
+      /* Decrement spare areas to read */
+      NumSpareAreaToRead--;
+
+      /* Increment the NAND address */
+      nandaddress = (uint32_t)(nandaddress + 1U);
+    }
+
+    /* Update the NAND controller state */
+    hnand->State = HAL_NAND_STATE_READY;
+
+    /* Process unlocked */
+    __HAL_UNLOCK(hnand);
+  }
+  else
+  {
+    return HAL_ERROR;
+  }
+
+  return HAL_OK;
+}
+
+
+/**
+  * @brief  Write Spare area(s) to NAND memory (8-bits addressing)
+  * @param  hnand pointer to a NAND_HandleTypeDef structure that contains
+  *                the configuration information for NAND module.
+  * @param  pAddress  pointer to NAND address structure
+  * @param  pBuffer  pointer to source buffer to write
+  * @param  NumSpareAreaTowrite   number of spare areas to write to block
+  * @retval HAL status
+  */
+HAL_StatusTypeDef HAL_NAND_K9_Write_SpareArea(NAND_HandleTypeDef *hnand, NAND_AddressTypeDef *pAddress,
+                                              uint8_t *pBuffer, uint32_t NumSpareAreaTowrite)
+{
+
+  uint32_t deviceaddress;
+  uint32_t nandaddress;
+  uint32_t columnaddress;
+
+  uint32_t index;
+  uint32_t tickstart;
+
+  //uint32_t numspareareawritten = 0;
+
+  /* Check the NAND controller state */
+  if (hnand->State == HAL_NAND_STATE_BUSY)
+  {
+    return HAL_BUSY;
+  }
+  else if (hnand->State == HAL_NAND_STATE_READY)
+  {
+    /* Process Locked */
+    __HAL_LOCK(hnand);
+
+    /* Update the NAND controller state */
+    hnand->State = HAL_NAND_STATE_BUSY;
+
+    /* Identify the device address */
+    if (hnand->Init.NandBank == FSMC_NAND_BANK2)
+    {
+      deviceaddress = NAND_DEVICE1;
+    }
+    else
+    {
+      deviceaddress = NAND_DEVICE2;
+    }
+
+    /* Page address calculation */
+    nandaddress = ARRAY_ADDRESS(pAddress, hnand);
+
+    /* Column in page address */
+    columnaddress = COLUMN_ADDRESS(hnand);
+
+    /* Spare area(s) write loop */
+    while ((NumSpareAreaTowrite != 0U) && (nandaddress < ((hnand->Config.BlockSize) * (hnand->Config.BlockNbr))))
+    {
+
+      /* Send write Spare area command sequence */
+      *(__IO uint8_t *)((uint32_t)(deviceaddress | CMD_AREA)) = NAND_CMD_WRITE0;
+      __DSB();
+
+      *(__IO uint8_t *)((uint32_t)(deviceaddress | ADDR_AREA)) = COLUMN_1ST_CYCLE(columnaddress);
+      __DSB();
+      *(__IO uint8_t *)((uint32_t)(deviceaddress | ADDR_AREA)) = COLUMN_2ND_CYCLE(columnaddress);
+      __DSB();
+      *(__IO uint8_t *)((uint32_t)(deviceaddress | ADDR_AREA)) = ADDR_1ST_CYCLE(nandaddress);
+      __DSB();
+      *(__IO uint8_t *)((uint32_t)(deviceaddress | ADDR_AREA)) = ADDR_2ND_CYCLE(nandaddress);
+      __DSB();
+
+      /* Write data to memory */
+      for (index = 0U; index < hnand->Config.SpareAreaSize; index++)
+      {
+        *(__IO uint8_t *)deviceaddress = *pBuffer;
+        pBuffer++;
+        __DSB();
+      }
+
+      *(__IO uint8_t *)((uint32_t)(deviceaddress | CMD_AREA)) = NAND_CMD_WRITE_TRUE1;
+      __DSB();
+
+      /* Get tick */
+      tickstart = HAL_GetTick();
+
+      /* Read status until NAND is ready */
+      while (HAL_NAND_Read_Status(hnand) != NAND_READY)
+      {
+        if ((HAL_GetTick() - tickstart) > NAND_WRITE_TIMEOUT)
+        {
+          /* Update the NAND controller state */
+          hnand->State = HAL_NAND_STATE_ERROR;
+
+          /* Process unlocked */
+          __HAL_UNLOCK(hnand);
+
+          return HAL_TIMEOUT;
+        }
+      }
+
+      /* Increment written spare areas number */
+      //numspareareawritten++;
+
+      /* Decrement spare areas to write */
+      NumSpareAreaTowrite--;
+
+      /* Increment the NAND address */
+      nandaddress = (uint32_t)(nandaddress + 1U);
+    }
+
+    /* Update the NAND controller state */
+    hnand->State = HAL_NAND_STATE_READY;
+
+    /* Process unlocked */
+    __HAL_UNLOCK(hnand);
+  }
+  else
+  {
+    return HAL_ERROR;
+  }
+
+  return HAL_OK;
+}
+
 
 /**
   * @brief  NAND memory Block erase

@@ -43,6 +43,10 @@ HAL_StatusTypeDef  HAL_NAND_K9_Read_Page(NAND_HandleTypeDef *hnand, NAND_Address
                                          uint32_t NumPageToRead);
 HAL_StatusTypeDef  HAL_NAND_K9_Write_Page(NAND_HandleTypeDef *hnand, NAND_AddressTypeDef *pAddress, uint8_t *pBuffer,
                                           uint32_t NumPageToWrite);
+HAL_StatusTypeDef HAL_NAND_K9_Read_SpareArea(NAND_HandleTypeDef *hnand, NAND_AddressTypeDef *pAddress, uint8_t *pBuffer,
+                                             uint32_t NumSpareAreaToRead);
+HAL_StatusTypeDef HAL_NAND_K9_Write_SpareArea(NAND_HandleTypeDef *hnand, NAND_AddressTypeDef *pAddress,
+                                              uint8_t *pBuffer, uint32_t NumSpareAreaTowrite);
 HAL_StatusTypeDef  HAL_NAND_K9_Erase_Block(NAND_HandleTypeDef *hnand, NAND_AddressTypeDef *pAddress);
 
 uint32_t           HAL_NAND_K9_Address_Inc(NAND_HandleTypeDef *hnand, NAND_AddressTypeDef *pAddress);
